@@ -70,6 +70,8 @@ h1 span{color:var(--gold)}
   padding:0 max(14px,env(safe-area-inset-left))}
 .tap{border-radius:14px;padding:12px 20px;font-weight:900;font-size:clamp(15px,4vmin,22px);background:rgba(0,0,0,.22)}
 .tap.y{background:rgba(255,255,255,.22)}
+.tap{position:relative;cursor:pointer}
+.hap{position:absolute;inset:0;width:100%;height:100%;opacity:.01;margin:0;pointer-events:none}
 #sensorState{position:absolute;bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));left:0;right:0;font-size:13px;color:var(--muted)}
 .rotate{display:none;position:fixed;inset:0;background:var(--bg2);z-index:20;align-items:center;justify-content:center;
   flex-direction:column;gap:12px;text-align:center;padding:24px;font-size:22px;font-weight:700}
@@ -121,8 +123,9 @@ h1 span{color:var(--gold)}
   <div id="word"></div>
   <div id="sensorState"></div>
   <div class="taps">
-    <button class="tap" id="tapSkip"></button>
-    <button class="tap y" id="tapOk"></button>
+    <!-- label + verstecktes Schalter-Feld: der echte Fingertipp legt den Schalter um, das gibt am iPhone Haptik -->
+    <label class="tap" id="tapSkip"><input type="checkbox" switch class="hap"><span></span></label>
+    <label class="tap y" id="tapOk"><input type="checkbox" switch class="hap"><span></span></label>
   </div>
 </section>
 
@@ -226,7 +229,7 @@ function buzz(p){
   try{ if(navigator.vibrate && navigator.vibrate(pattern)) return }catch(e){}
   // iPhone: für jeden Puls ein Haptik-Tipp
   let t=0;
-  pattern.forEach((d,i)=>{ if(i%2===0) setTimeout(hapticTap,t); t+=d; });
+  pattern.forEach((d,i)=>{ if(i%2===0){ if(t===0) hapticTap(); else setTimeout(hapticTap,t); } t+=d; });
 }
 
 /* ---------- Startbildschirm ---------- */
@@ -237,7 +240,7 @@ function renderHome(){
   $("times").innerHTML=[60,90,120].map(s=>`<button class="seg${s===roundSec?" sel":""}" data-s="${s}">${s}s</button>`).join(" ");
   const all={id:"all",i:"🎲",vi:TXT.vi.all,de:TXT.de.all,w:[...new Set(CATS.flatMap(c=>c.w))]};
   $("cats").innerHTML=[...CATS,all].map(c=>`<button class="cat" data-c="${c.id}"><i>${c.i}</i><b>${c[lang]}</b><small>${T("words")(c.w.length)}</small></button>`).join("");
-  $("tapOk").textContent=T("tapOk"); $("tapSkip").textContent=T("tapSkip");
+  $("tapOk").querySelector("span").textContent=T("tapOk"); $("tapSkip").querySelector("span").textContent=T("tapSkip");
   $("again").textContent=T("again"); $("toHome").textContent=T("home");
 }
 $("langBtn").onclick=()=>{lang=lang==="vi"?"de":"vi";store.set("lang",lang);renderHome()};
@@ -377,8 +380,9 @@ function answer(ok){
     if(sensor!=="on"||tilt==null||Math.abs(rel())<DEG_NEUTRAL)game.armed=true;
   },800);
 }
-$("tapOk").onclick=e=>{e.stopPropagation();unlockAudio();answer(true)};
-$("tapSkip").onclick=e=>{e.stopPropagation();unlockAudio();answer(false)};
+// Ein Tipp aufs label löst zusätzlich einen Klick auf das Schalter-Feld aus; den ignorieren, sonst zählt es doppelt.
+$("tapOk").onclick=e=>{e.stopPropagation();if(e.target.tagName==="INPUT")return;unlockAudio();answer(true,true)};
+$("tapSkip").onclick=e=>{e.stopPropagation();if(e.target.tagName==="INPUT")return;unlockAudio();answer(false,true)};
 $("quit").onclick=()=>{stopGame();showHome()};
 
 function stopGame(){
