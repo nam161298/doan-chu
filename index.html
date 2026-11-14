@@ -1,0 +1,371 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
+<title>Đoán Chữ</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Đoán Chữ">
+<meta name="theme-color" content="#b3122b">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#b3122b; --bg2:#8e0d21; --ink:#fff; --muted:rgba(255,255,255,.75);
+  --gold:#ffd23f; --ok:#16a34a; --skip:#f59e0b; --card:rgba(255,255,255,.12);
+  --font:"Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;overscroll-behavior:none}
+body{background:var(--bg);color:var(--ink);font-family:var(--font);
+  -webkit-user-select:none;user-select:none;-webkit-touch-callout:none;touch-action:manipulation}
+button{font-family:inherit;color:inherit;border:0;cursor:pointer}
+.screen{position:fixed;inset:0;display:none;flex-direction:column;
+  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(16px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
+.screen.on{display:flex}
+
+/* Start */
+#home{overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,var(--bg),var(--bg2))}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:6px}
+h1{font-size:32px;font-weight:900;letter-spacing:.5px}
+h1 span{color:var(--gold)}
+.sub{color:var(--muted);font-size:15px;margin-bottom:14px;line-height:1.35}
+.pill{background:var(--card);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
+.row label{color:var(--muted);font-size:14px;margin-right:4px}
+.seg{background:var(--card);border-radius:12px;padding:8px 12px;font-weight:700;font-size:15px}
+.seg.sel{background:var(--gold);color:#3a1a00}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;padding-bottom:20px}
+.cat{background:var(--card);border-radius:16px;padding:16px 12px;text-align:left;min-height:86px;
+  display:flex;flex-direction:column;justify-content:space-between;transition:transform .1s}
+.cat:active{transform:scale(.96)}
+.cat b{font-size:17px;line-height:1.2}
+.cat i{font-style:normal;font-size:26px}
+.cat small{color:var(--muted);font-size:12px}
+.how{background:rgba(0,0,0,.18);border-radius:14px;padding:12px 14px;font-size:14px;line-height:1.5;color:var(--muted);margin-bottom:14px}
+.how b{color:var(--ink)}
+
+/* Countdown / play */
+#ready,#play{align-items:center;justify-content:center;text-align:center}
+#ready .big{font-size:clamp(90px,30vmin,220px);font-weight:900;color:var(--gold);line-height:1}
+#ready .msg{font-size:clamp(22px,6vmin,40px);font-weight:700;margin-bottom:10px}
+#ready .hint{color:var(--muted);font-size:clamp(14px,3.6vmin,20px);margin-top:14px;max-width:34em;line-height:1.4}
+#play{transition:background .15s}
+#play.ok{background:var(--ok)}
+#play.skip{background:var(--skip)}
+#word{font-weight:900;line-height:1.05;max-width:94vw;word-wrap:break-word;padding:0 8px}
+#timer{position:absolute;top:max(10px,env(safe-area-inset-top));left:50%;transform:translateX(-50%);
+  font-size:clamp(22px,6vmin,40px);font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums}
+#timer.low{color:#fff;animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.35}}
+#score{position:absolute;top:max(14px,env(safe-area-inset-top));right:max(16px,env(safe-area-inset-right));font-weight:700;font-size:clamp(16px,4vmin,24px)}
+#quit{position:absolute;top:max(10px,env(safe-area-inset-top));left:max(12px,env(safe-area-inset-left));
+  background:rgba(0,0,0,.2);width:42px;height:42px;border-radius:50%;font-size:20px}
+.taps{position:absolute;bottom:max(12px,env(safe-area-inset-bottom));left:0;right:0;display:flex;justify-content:space-between;
+  padding:0 max(14px,env(safe-area-inset-left))}
+.tap{border-radius:14px;padding:12px 20px;font-weight:900;font-size:clamp(15px,4vmin,22px);background:rgba(0,0,0,.22)}
+.tap.y{background:rgba(255,255,255,.22)}
+#sensorState{position:absolute;bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));left:0;right:0;font-size:13px;color:var(--muted)}
+.rotate{display:none;position:fixed;inset:0;background:var(--bg2);z-index:20;align-items:center;justify-content:center;
+  flex-direction:column;gap:12px;text-align:center;padding:24px;font-size:22px;font-weight:700}
+.rotate .ico{font-size:64px;animation:turn 1.6s infinite}
+.rotate small{font-size:14px;color:var(--muted);font-weight:500}
+@keyframes turn{50%{transform:rotate(-90deg)}}
+@media (orientation:portrait){body.playing .rotate.show{display:flex}}
+
+/* Results */
+#result{overflow-y:auto;-webkit-overflow-scrolling:touch;background:linear-gradient(160deg,var(--bg),var(--bg2))}
+.res-head{text-align:center;margin:8px 0 14px}
+.res-head .n{font-size:72px;font-weight:900;color:var(--gold);line-height:1}
+.res-head .t{color:var(--muted);font-size:16px}
+.list{list-style:none;display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:6px;margin-bottom:16px}
+.list li{background:var(--card);border-radius:10px;padding:10px 12px;font-size:17px;font-weight:700;display:flex;gap:10px;align-items:center}
+.list li.s{opacity:.55;font-weight:500}
+.list li .m{width:22px;text-align:center}
+.btns{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;padding-bottom:20px}
+.btn{background:var(--gold);color:#3a1a00;border-radius:14px;padding:14px 22px;font-weight:900;font-size:17px}
+.btn.alt{background:var(--card);color:var(--ink)}
+.note{background:rgba(0,0,0,.25);border-radius:12px;padding:10px 14px;font-size:14px;line-height:1.4;margin-bottom:12px;display:none}
+.note.on{display:block}
+</style>
+</head>
+<body>
+
+<section id="home" class="screen on">
+  <div class="top">
+    <h1>Đoán <span>Chữ</span></h1>
+    <button class="pill" id="langBtn">DE</button>
+  </div>
+  <p class="sub" data-t="tagline"></p>
+  <div class="how" data-t="how"></div>
+  <div class="note" id="sensorNote"></div>
+  <div class="row"><label data-t="time"></label><span id="times"></span></div>
+  <div class="grid" id="cats"></div>
+</section>
+
+<section id="ready" class="screen">
+  <div class="msg" data-t="forehead"></div>
+  <div class="big" id="count">3</div>
+  <div class="hint" data-t="readyHint"></div>
+</section>
+
+<section id="play" class="screen">
+  <button id="quit" aria-label="Quit">✕</button>
+  <div id="timer">60</div>
+  <div id="score">0</div>
+  <div id="word"></div>
+  <div id="sensorState"></div>
+  <div class="taps">
+    <button class="tap" id="tapSkip"></button>
+    <button class="tap y" id="tapOk"></button>
+  </div>
+</section>
+
+<section id="result" class="screen">
+  <div class="res-head">
+    <div class="t" data-t="timeUp"></div>
+    <div class="n" id="resN">0</div>
+    <div class="t" id="resT"></div>
+  </div>
+  <ul class="list" id="resList"></ul>
+  <div class="btns">
+    <button class="btn" id="again"></button>
+    <button class="btn alt" id="toHome"></button>
+  </div>
+</section>
+
+<div class="rotate" id="rotate"><div class="ico">📱</div><div data-t="rotate"></div><small data-t="rotateSmall"></small></div>
+
+<script>
+"use strict";
+/* ---------- Begriffe ---------- */
+const CATS = [
+ {id:"vn", i:"🇻🇳", vi:"Tuổi thơ & thương hiệu Việt", de:"Typisch Vietnam", w:["Biti's Hunter","Vinamilk","Mì Hảo Hảo","Cà phê Trung Nguyên","Bia Sài Gòn","Bia 333","Bia Hà Nội","Nước tăng lực Sting","Trà xanh C2","Kem Tràng Tiền","Bánh Chocopie","Kẹo dừa Bến Tre","Honda Dream","Honda Wave","VinFast","Grab","Zalo","Ví MoMo","Vietjet Air","Vietnam Airlines","Thế Giới Di Động","Highlands Coffee","Trà Phúc Long","Sơn Tùng M-TP","Mỹ Tâm","Đàm Vĩnh Hưng","Hoài Linh","Trấn Thành","Paris By Night","Gặp nhau cuối tuần","Rap Việt","Bảy viên ngọc rồng","Siêu nhân Gao","Thần đồng đất Việt","Kính vạn hoa","Đế chế","Võ Lâm Truyền Kỳ","Audition","Liên Quân Mobile","Flappy Bird","Nuôi gà ảo","Bắn bi","Nhảy dây thun","Áo mưa cánh dơi","Phim Hàn Quốc","Nước mắm Nam Ngư","Bột giặt Omo","Dầu gió","Kem đánh răng P/S","Xe đạp Thống Nhất"]},
+ {id:"de", i:"🇩🇪", vi:"Nước Đức", de:"Typisch Deutschland", w:["Lễ hội Oktoberfest","Xúc xích Đức","Bánh Brezel","Bánh mì đen","Dưa cải muối","Döner","Currywurst","Bia Đức","Rượu vang nóng","Chợ Giáng sinh","Lịch Mùa Vọng","Trứng Phục Sinh","Lễ hội Carnival","Lâu đài Neuschwanstein","Cổng Brandenburg","Bức tường Berlin","Đường cao tốc Autobahn","Tàu Deutsche Bahn","Tàu trễ giờ","Mercedes","BMW","Porsche","Volkswagen","Audi","Adidas","Puma","Aldi","Lidl","Hiệu thuốc DM","Kẹo Haribo","Kem Nivea","Sô-cô-la Ritter Sport","Bayern München","Bundesliga","Đội tuyển Đức","Angela Merkel","Quần da Lederhosen","Phân loại rác","Thùng rác màu vàng","Trả chai lấy tiền cọc","Chủ nhật đóng cửa","Giờ yên tĩnh","Sở ngoại kiều","Học tiếng Đức","Đồng Xuân Center","Tiệm nail","Tờ khai thuế","Rừng Đen","Sông Rhein","Đi nghỉ ở Mallorca"]},
+ {id:"food", i:"🍜", vi:"Món ăn", de:"Essen", w:["Phở","Bánh mì","Bún chả","Bún bò Huế","Cơm tấm","Bánh xèo","Gỏi cuốn","Chả giò","Bánh chưng","Bánh cuốn","Hủ tiếu","Mì Quảng","Cao lầu","Bánh bao","Xôi","Chè","Cà phê sữa đá","Trà sữa","Bánh flan","Cá kho tộ","Canh chua","Thịt kho trứng","Rau muống xào tỏi","Lẩu","Bò lá lốt","Bánh tráng trộn","Ốc","Nem nướng","Bún riêu","Cháo gà","Bánh pía","Sữa chua","Bánh trung thu","Gà rán","Pizza","Sushi","Mì tôm","Nước mắm","Trứng vịt lộn","Bánh căn","Bánh khọt","Bánh bèo","Bánh ít","Bánh da lợn","Chè ba màu","Bún mắm","Bún thịt nướng","Bánh canh","Cơm gà","Cơm chiên","Gà luộc","Vịt quay","Heo quay","Lạp xưởng","Chả lụa","Giò thủ","Dưa chua","Kem","Bánh tráng nướng","Cà phê trứng"]},
+ {id:"animals", i:"🐘", vi:"Động vật", de:"Tiere", w:["Con mèo","Con chó","Con voi","Con khỉ","Con hổ","Con sư tử","Con trâu","Con gà","Con vịt","Con heo","Con rắn","Con cá sấu","Con rùa","Con ếch","Con cá voi","Con cá heo","Chim cánh cụt","Hươu cao cổ","Ngựa vằn","Gấu trúc","Chuột túi","Con thỏ","Con chuột","Con muỗi","Con gián","Con bướm","Con ong","Con kiến","Con nhện","Con mực","Bạch tuộc","Con cua","Con tôm","Con dê","Con cừu","Con bò","Cú mèo","Con vẹt","Con dơi","Lạc đà","Con công","Con hạc","Đại bàng","Con quạ","Chim sẻ","Cá vàng","Cá mập","Con sứa","Ốc sên","Con giun","Chuồn chuồn","Châu chấu","Đom đóm","Tắc kè","Thằn lằn","Chó sói","Con cáo","Con gấu","Con nhím","Hà mã"]},
+ {id:"jobs", i:"👩‍⚕️", vi:"Nghề nghiệp", de:"Berufe", w:["Bác sĩ","Y tá","Giáo viên","Cảnh sát","Lính cứu hỏa","Đầu bếp","Phi công","Tiếp viên hàng không","Ca sĩ","Diễn viên","Thợ cắt tóc","Thợ làm móng","Nông dân","Ngư dân","Kỹ sư","Lập trình viên","Luật sư","Nha sĩ","Tài xế taxi","Shipper","Nhiếp ảnh gia","Họa sĩ","Nhà báo","Thợ sửa xe","Thợ điện","Bán hàng rong","Bảo vệ","Phi hành gia","Ảo thuật gia","Huấn luyện viên","Bác sĩ thú y","Kiến trúc sư","Thủ thư","Người mẫu","DJ","Youtuber","Streamer","Dược sĩ","Thợ xây","Chú hề","Thợ may","Thợ mộc","Thợ sửa ống nước","Lao công","Giám đốc","Thư ký","Kế toán","Phiên dịch","Hướng dẫn viên du lịch","Bồi bàn","Pha chế","Thợ làm bánh","Người giúp việc","Vận động viên","Cầu thủ","Trọng tài","Nhà khoa học","Bác sĩ phẫu thuật","Tổng thống","Xe ôm"]},
+ {id:"places", i:"🏞️", vi:"Địa danh Việt Nam", de:"Orte in Vietnam", w:["Hà Nội","Sài Gòn","Đà Nẵng","Huế","Hội An","Vịnh Hạ Long","Sa Pa","Đà Lạt","Nha Trang","Phú Quốc","Cần Thơ","Hải Phòng","Vũng Tàu","Mũi Né","Côn Đảo","Ninh Bình","Hồ Gươm","Chợ Bến Thành","Lăng Bác","Cầu Rồng","Cầu Vàng","Phố cổ Hà Nội","Sông Mê Kông","Động Phong Nha","Hà Giang","Quy Nhơn","Buôn Ma Thuột","Núi Bà Đen","Chợ nổi Cái Răng","Dinh Độc Lập","Nhà thờ Đức Bà","Landmark 81","Hồ Tây","Văn Miếu","Chùa Một Cột","Thánh địa Mỹ Sơn","Fansipan","Mộc Châu","Phố đi bộ Nguyễn Huệ","Chợ Đồng Xuân","Châu Đốc","Bà Nà Hills","Tam Đảo","Cát Bà","Bến Tre","Mũi Cà Mau","Hồ Ba Bể","Vịnh Lan Hạ","Tràng An","Chợ Lớn","Phố Tây Bùi Viện","Cầu Long Biên","Hồ Xuân Hương","Đèo Hải Vân","Cột cờ Lũng Cú","Làng gốm Bát Tràng","Kinh thành Huế","Đảo Lý Sơn","Phan Thiết","Tam Cốc"]},
+ {id:"actions", i:"🤸", vi:"Hành động", de:"Pantomime", w:["Đánh răng","Bơi lội","Nhảy dây","Đạp xe","Lái xe máy","Nấu cơm","Gội đầu","Câu cá","Hát karaoke","Chụp ảnh selfie","Đá bóng","Ngủ gật","Ngáp","Hắt hơi","Khóc","Cười lớn","Leo núi","Trượt tuyết","Đánh cầu lông","Chơi đàn guitar","Gõ bàn phím","Gọi điện thoại","Rửa bát","Quét nhà","Phơi đồ","Thổi nến","Ôm","Vỗ tay","Chèo thuyền","Bắn cung","Đấm bốc","Nhảy múa","Tập yoga","Ăn bằng đũa","Mặc cả","Đội nón lá","Đi cà kheo","Thay tã","Trang điểm","Đẩy xe hàng","Đánh bài","Xếp hàng","Bóc vỏ tôm","Uống trà","Rót bia","Cụng ly","Dắt chó đi dạo","Lau kính","Tắm mưa","Thắt cà vạt","Buộc dây giày","Mở hộp quà","Đi nhón chân","Bắt muỗi","Thả thính","Nhắn tin","Livestream bán hàng","Đội mũ bảo hiểm","Nhổ tóc bạc","Ru em bé ngủ"]},
+ {id:"fruit", i:"🥭", vi:"Trái cây & rau", de:"Obst & Gemüse", w:["Xoài","Sầu riêng","Măng cụt","Chôm chôm","Thanh long","Mít","Vú sữa","Nhãn","Vải","Chuối","Dừa","Dưa hấu","Đu đủ","Ổi","Bưởi","Cam","Chanh","Khế","Mãng cầu","Quả bơ","Dâu tây","Nho","Táo","Lê","Dứa","Cà chua","Ớt","Tỏi","Hành lá","Rau thơm","Cà rốt","Khoai lang","Bắp","Bí đỏ","Dưa leo","Mướp đắng","Rau muống","Gừng","Sả","Nấm","Quả me","Quả cóc","Sơ ri","Hồng xiêm","Quả lựu","Kiwi","Việt quất","Quả mận","Quả đào","Quả hồng","Bòn bon","Dâu tằm","Khoai tây","Su hào","Bắp cải","Súp lơ","Củ cải","Đậu bắp","Rau cải","Hạt sen"]},
+ {id:"culture", i:"🧧", vi:"Văn hóa & Tết", de:"Kultur & Tết", w:["Tết Nguyên Đán","Lì xì","Hoa mai","Hoa đào","Múa lân","Pháo hoa","Đi chùa","Áo dài","Nón lá","Trung thu","Đèn lồng","Ông Táo","Mâm ngũ quả","Câu đối","Xông đất","Bàn thờ tổ tiên","Đám cưới","Đàn bầu","Múa rối nước","Cải lương","Vovinam","Đá cầu","Ô ăn quan","Bầu cua tôm cá","Tiến lên","Thánh Gióng","Sơn Tinh Thủy Tinh","Tấm Cám","Con Rồng cháu Tiên","Hai Bà Trưng","Chú Cuội","Chị Hằng","Xe máy","Quán cóc","Ghế nhựa","Trà đá","Phong bì đỏ","Bánh tét","Chợ Tết","Cây nêu","Chúc Tết","Hái lộc","Giao thừa","Táo quân","Lễ Vu Lan","Thần tài","Rằm tháng Giêng","Chùa Hương","Hát quan họ","Ca trù","Đờn ca tài tử","Tranh Đông Hồ","Tò he","Múa sạp","Lồng đèn ông sao","Bánh dày","Nhà sàn","Xích lô","Chợ quê","Áo bà ba"]},
+ {id:"things", i:"🛵", vi:"Đồ vật", de:"Gegenstände", w:["Điện thoại","Cái ô","Bàn chải đánh răng","Cái chảo","Nồi cơm điện","Quạt máy","Máy lạnh","Tủ lạnh","Cái gương","Đồng hồ","Kính râm","Mũ bảo hiểm","Ba lô","Ví tiền","Chìa khóa","Cái kéo","Bút bi","Cây chổi","Đôi đũa","Cái thìa","Cái bát","Cái gối","Cái chăn","Ghế sofa","Bàn là","Máy giặt","Ti vi","Điều khiển","Sạc điện thoại","Tai nghe","Máy tính","Kem đánh răng","Dép tổ ong","Giày cao gót","Cái thang","Đèn pin","Bình hoa","Cái võng","Cái lược","Máy sấy tóc","Cái nồi","Cái muôi","Cái thớt","Con dao","Ấm siêu tốc","Lò vi sóng","Bếp ga","Ghế đẩu","Nhiệt kế","Giấy vệ sinh","Kẹp phơi đồ","Móc treo quần áo","Sổ tay","Cục tẩy","Thước kẻ","Bình giữ nhiệt","Ổ cắm điện","Bóng đèn","Cái xô","Bật lửa"]},
+ {id:"sport", i:"⚽", vi:"Thể thao & vui chơi", de:"Sport & Freizeit", w:["Bóng đá","Bóng rổ","Cầu lông","Quần vợt","Bóng bàn","Bóng chuyền","Pickleball","Đua xe","Võ thuật","Cờ vua","Cờ tướng","Golf","Lướt sóng","Trượt patin","Chạy marathon","World Cup","Thế vận hội","SEA Games","Tập gym","Rạp chiếu phim","Công viên nước","Tàu lượn siêu tốc","Đu quay","Cắm trại","Dã ngoại","Game điện tử","Ma sói","Bi-a","Bowling","Nhảy bungee","Dù lượn","Lặn biển","Đua thuyền","Kéo co","Bịt mắt bắt dê","Trốn tìm","Thả diều","Nhảy lò cò","Xem bói","Đi phượt","Đấu vật","Đấu kiếm","Thể dục dụng cụ","Nhảy cao","Nhảy xa","Ném lao","Bóng chày","Bóng bầu dục","Khúc côn cầu","Trượt băng","Xe đạp địa hình","Đua ngựa","Bắn súng sơn","Phòng thoát hiểm","Xếp hình Lego","Rubik","Cờ cá ngựa","Sudoku","Xem ca nhạc","Lô tô"]},
+ {id:"world", i:"🌍", vi:"Thế giới", de:"Welt", w:["Nước Đức","Nước Pháp","Nước Mỹ","Nhật Bản","Hàn Quốc","Trung Quốc","Thái Lan","Nước Úc","Brazil","Ai Cập","Nước Ý","Tây Ban Nha","Nước Anh","Nước Nga","Ấn Độ","Canada","Mexico","Thụy Sĩ","Hà Lan","Singapore","Tháp Eiffel","Tượng Nữ thần Tự do","Vạn Lý Trường Thành","Kim tự tháp","Big Ben","Berlin","München","Paris","London","New York","Tokyo","Seoul","Bangkok","Dubai","Hawaii","Bắc Cực","Sa mạc Sahara","Núi Everest","Rừng Amazon","Venice","Nước Lào","Campuchia","Indonesia","Philippines","Malaysia","Thổ Nhĩ Kỳ","Hy Lạp","Bồ Đào Nha","Nước Áo","Ba Lan","Argentina","Nam Phi","Bắc Kinh","Rome","Sydney","Las Vegas","Hollywood","Disneyland","Tháp nghiêng Pisa","Đấu trường La Mã"]},
+ {id:"movies", i:"🎬", vi:"Phim & nhân vật", de:"Filme & Figuren", w:["Tôn Ngộ Không","Đường Tăng","Trư Bát Giới","Tây Du Ký","Doraemon","Nobita","Thám tử Conan","Pikachu","Tom và Jerry","Chuột Mickey","Công chúa Elsa","Người Nhện","Siêu Nhân","Batman","Harry Potter","Titanic","Shin cậu bé bút chì","Thủy thủ Mặt Trăng","Na Tra","Bao Thanh Thiên","Thạch Sanh","Lý Thông","Cô bé Lọ Lem","Bạch Tuyết","Nàng tiên cá","Shrek","Minion","Godzilla","King Kong","Ninja Rùa","Ông già Noel","Mr. Bean","Squid Game","Dế Mèn","Thúy Kiều","Chí Phèo","Lão Hạc","Vua sư tử","Iron Man","Bảy chú lùn"]},
+ {id:"proverbs", i:"📜", vi:"Thành ngữ & tục ngữ", de:"Sprichwörter", w:["Ăn quả nhớ kẻ trồng cây","Nước chảy đá mòn","Có công mài sắt có ngày nên kim","Một con ngựa đau cả tàu bỏ cỏ","Ếch ngồi đáy giếng","Đàn gảy tai trâu","Nước đổ đầu vịt","Mèo mù vớ cá rán","Chó cắn áo rách","Gần mực thì đen","Uống nước nhớ nguồn","Tốt gỗ hơn tốt nước sơn","Ăn cháo đá bát","Cá lớn nuốt cá bé","Mất bò mới lo làm chuồng","Vẽ rắn thêm chân","Thả hổ về rừng","Rung cây dọa khỉ","Đầu voi đuôi chuột","Cưỡi ngựa xem hoa","Ném đá giấu tay","Đi một ngày đàng học một sàng khôn","Tiền nào của nấy","Ăn trông nồi ngồi trông hướng","Chậm mà chắc","Lá lành đùm lá rách","Không thầy đố mày làm nên","Con hơn cha là nhà có phúc","Mưa dầm thấm lâu","Trâu chậm uống nước đục","Nhập gia tùy tục","Khẩu phật tâm xà","Họa vô đơn chí","Há miệng chờ sung","Ngậm bồ hòn làm ngọt","Chuột sa chĩnh gạo","Có mới nới cũ","Nói có sách mách có chứng","Ăn không ngồi rồi","Gậy ông đập lưng ông"]},
+ {id:"life", i:"🏠", vi:"Gia đình & đời sống", de:"Familie & Alltag", w:["Ông nội","Bà ngoại","Mẹ chồng","Con dâu","Anh rể","Em bé","Sinh nhật","Đám giỗ","Đi chợ","Siêu thị","Họp phụ huynh","Bài tập về nhà","Tăng ca","Lương tháng","Kẹt xe","Mất điện","Hàng xóm","Chuyển nhà","Hẹn hò","Cầu hôn","Tuần trăng mật","Họp lớp","Sân bay","Hộ chiếu","Ngân hàng","Bệnh viện","Đi khám răng","Dọn nhà","Tưới cây","Ngủ trưa","Tập thể dục buổi sáng","Đi nhậu","Mạng xã hội","Đặt đồ ăn online","Xem TikTok","Chụp ảnh cưới","Đầy tháng","Thôi nôi","Nghĩa vụ quân sự","Thi đại học"]},
+ {id:"body", i:"😄", vi:"Cơ thể & cảm xúc", de:"Körper & Gefühle", w:["Cái mũi","Lông mày","Răng khôn","Đầu gối","Khuỷu tay","Cái rốn","Má lúm đồng tiền","Tóc bạc","Bộ râu","Móng tay","Bụng bia","Hói đầu","Cơ bụng 6 múi","Vui vẻ","Buồn ngủ","Tức giận","Sợ hãi","Ngại ngùng","Ghen tuông","Đói bụng","No căng bụng","Say xe","Đau răng","Cảm cúm","Ho","Nấc cụt","Chóng mặt","Ngứa","Mồ hôi","Nước mắt","Nụ cười","Nháy mắt","Bĩu môi","Lè lưỡi","Nhăn mặt","Thở dài","Ngáy","Mộng du","Tim đập nhanh","Lạnh run"]}
+];
+
+/* ---------- Texte ---------- */
+const TXT = {
+ vi:{tagline:"Trò chơi đoán chữ cho cả nhà – đặt điện thoại lên trán!",
+  how:"<b>Cách chơi:</b> Một người đặt điện thoại lên trán, màn hình quay ra ngoài. Mọi người giải thích từ trên màn hình.<br>⬇️ <b>Cúi xuống</b> = Đúng &nbsp; ⬆️ <b>Ngửa lên</b> = Bỏ qua",
+  time:"Thời gian:", forehead:"Đặt điện thoại lên trán!", readyHint:"Cầm ngang điện thoại, màn hình quay về phía mọi người.",
+  ok:"ĐÚNG!", skip:"BỎ QUA", tapOk:"Đúng ✓", tapSkip:"Bỏ qua", timeUp:"Hết giờ!", correctOf:(n,m)=>`đúng trên ${m} từ`,
+  again:"Chơi lại", home:"Chọn chủ đề", all:"Trộn tất cả", allSub:"Tất cả chủ đề", words:n=>`${n} từ`,
+  rotate:"Xoay ngang điện thoại", rotateSmall:"Để chữ to hơn",
+  noSensor:"Không đọc được cảm biến nghiêng. Hãy dùng nút <b>Đúng</b> / <b>Bỏ qua</b> trên màn hình.",
+  denied:"Bạn chưa cho phép cảm biến chuyển động. Đóng ứng dụng, mở lại và bấm <b>Allow</b>. Trong lúc đó dùng nút trên màn hình.",
+  sensorOn:"Cảm biến nghiêng: bật", sensorOff:"Cảm biến tắt – dùng nút"},
+ de:{tagline:"Das Rate-Spiel für die ganze Familie – Handy an die Stirn!",
+  how:"<b>So geht's:</b> Eine Person hält das Handy an die Stirn, Bildschirm nach außen. Die anderen erklären den Begriff.<br>⬇️ <b>Nach unten kippen</b> = Richtig &nbsp; ⬆️ <b>Nach oben kippen</b> = Überspringen",
+  time:"Rundenzeit:", forehead:"Handy an die Stirn!", readyHint:"Handy quer halten, Bildschirm zu den anderen.",
+  ok:"RICHTIG!", skip:"WEITER", tapOk:"Richtig ✓", tapSkip:"Überspringen", timeUp:"Zeit um!", correctOf:(n,m)=>`richtig von ${m} Begriffen`,
+  again:"Nochmal", home:"Kategorie wählen", all:"Alles gemischt", allSub:"Alle Kategorien", words:n=>`${n} Begriffe`,
+  rotate:"Handy quer drehen", rotateSmall:"Dann wird die Schrift größer",
+  noSensor:"Kippsensor nicht erreichbar. Nutze die Knöpfe <b>Richtig</b> / <b>Überspringen</b> auf dem Bildschirm.",
+  denied:"Bewegungssensor nicht erlaubt. App schließen, neu öffnen und <b>Allow</b> tippen. Bis dahin gehen die Knöpfe.",
+  sensorOn:"Kippsensor: an", sensorOff:"Sensor aus – Knöpfe nutzen"}
+};
+
+/* ---------- Kleine Helfer ---------- */
+const $ = id => document.getElementById(id);
+const store = {get(k,d){try{const v=localStorage.getItem(k);return v===null?d:JSON.parse(v)}catch(e){return d}},
+               set(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}};
+let lang = store.get("lang","vi");
+let roundSec = store.get("sec",60);
+const T = k => TXT[lang][k];
+function shuffle(a){a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.toggle("on",s.id===id))}
+
+/* ---------- Ton ---------- */
+let ac=null;
+function unlockAudio(){try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()} if(ac.state==="suspended")ac.resume()}catch(e){}}
+function beep(freq,dur,type="sine",vol=.25,when=0){
+  if(!ac)return; try{const t=ac.currentTime+when,o=ac.createOscillator(),g=ac.createGain();
+  o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
+  o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur)}catch(e){}}
+const sndOk=()=>{beep(660,.12,"triangle");beep(990,.18,"triangle",.25,.1)};
+const sndSkip=()=>beep(220,.25,"sawtooth",.12);
+const sndTick=()=>beep(880,.06,"square",.08);
+const sndEnd=()=>{beep(520,.25,"square",.15);beep(390,.25,"square",.15,.25);beep(260,.5,"square",.15,.5)};
+const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+
+/* ---------- Startbildschirm ---------- */
+function renderHome(){
+  document.documentElement.lang=lang;
+  document.querySelectorAll("[data-t]").forEach(el=>el.innerHTML=T(el.dataset.t));
+  $("langBtn").textContent = lang==="vi" ? "DE" : "VI";
+  $("times").innerHTML=[60,90,120].map(s=>`<button class="seg${s===roundSec?" sel":""}" data-s="${s}">${s}s</button>`).join(" ");
+  const all={id:"all",i:"🎲",vi:TXT.vi.all,de:TXT.de.all,w:[...new Set(CATS.flatMap(c=>c.w))]};
+  $("cats").innerHTML=[...CATS,all].map(c=>`<button class="cat" data-c="${c.id}"><i>${c.i}</i><b>${c[lang]}</b><small>${T("words")(c.w.length)}</small></button>`).join("");
+  $("tapOk").textContent=T("tapOk"); $("tapSkip").textContent=T("tapSkip");
+  $("again").textContent=T("again"); $("toHome").textContent=T("home");
+}
+$("langBtn").onclick=()=>{lang=lang==="vi"?"de":"vi";store.set("lang",lang);renderHome()};
+$("times").onclick=e=>{const b=e.target.closest("[data-s]");if(!b)return;roundSec=+b.dataset.s;store.set("sec",roundSec);renderHome()};
+$("cats").onclick=e=>{const b=e.target.closest("[data-c]");if(b)startRound(b.dataset.c)};
+
+/* ---------- Bewegungssensor ---------- */
+// tilt = Anteil der Schwerkraft senkrecht zum Bildschirm:
+// +1 Bildschirm zeigt zur Decke, 0 Handy steht senkrecht (an der Stirn), -1 Bildschirm zeigt zum Boden.
+let sensor="unknown";   // unknown | on | denied | none
+let tilt=null, lastEvt=0;
+const TH_FIRE=0.55;     // ca. 33° gekippt -> zählt
+const TH_NEUTRAL=0.30;  // ca. 17° -> wieder "gerade", nächster Kipp erlaubt
+function onOrient(e){
+  if(e.beta==null||e.gamma==null)return;
+  const r=Math.PI/180;
+  tilt=Math.cos(e.beta*r)*Math.cos(e.gamma*r);
+  lastEvt=performance.now();
+  if(sensor!=="on"){sensor="on";updateSensorUI()}
+  if(game.active)checkTilt();
+}
+let listening=false;
+async function enableSensor(){
+  // muss direkt aus einem Fingertipp kommen (iOS)
+  try{
+    if(typeof DeviceOrientationEvent!=="undefined" && typeof DeviceOrientationEvent.requestPermission==="function"){
+      const res=await DeviceOrientationEvent.requestPermission();
+      if(res!=="granted"){sensor="denied";updateSensorUI();return}
+    }
+    if(!listening){window.addEventListener("deviceorientation",onOrient);listening=true}
+    setTimeout(()=>{if(sensor!=="on"){sensor="none";updateSensorUI()}},1500);
+  }catch(err){sensor="denied";updateSensorUI()}
+}
+function updateSensorUI(){
+  const n=$("sensorNote");
+  if(sensor==="denied"){n.innerHTML=T("denied");n.classList.add("on")}
+  else if(sensor==="none"){n.innerHTML=T("noSensor");n.classList.add("on")}
+  else n.classList.remove("on");
+  $("sensorState").textContent = sensor==="on"?T("sensorOn"):(sensor==="unknown"?"":T("sensorOff"));
+}
+
+/* ---------- Spiel ---------- */
+const decks={};
+const game={active:false,cat:null,words:[],idx:0,results:[],end:0,armed:false,lock:false,raf:0,lastSec:-1,cdTimer:0};
+function nextWord(){
+  const id=game.cat;
+  if(!decks[id]||!decks[id].length){
+    const src=id==="all"?[...new Set(CATS.flatMap(c=>c.w))]:CATS.find(c=>c.id===id).w;
+    decks[id]=shuffle(src);
+  }
+  game.current=decks[id].pop();
+  const w=$("word"); w.textContent=game.current; fitWord();
+}
+function fitWord(){
+  const w=$("word"); if(!w.textContent)return;
+  const maxW=innerWidth*0.92, maxH=innerHeight*0.55;
+  let size=Math.min(innerWidth,innerHeight)*0.42;
+  w.style.fontSize=size+"px";
+  for(let k=0;k<30&&(w.scrollWidth>maxW||w.scrollHeight>maxH);k++){size*=0.9;w.style.fontSize=size+"px"}
+}
+addEventListener("resize",()=>{if(game.active)fitWord()});
+
+let wakeLock=null;
+async function keepAwake(on){
+  try{
+    if(on&&"wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen")}
+    else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}
+  }catch(e){}
+}
+
+async function startRound(catId){
+  unlockAudio();
+  if(sensor!=="on")enableSensor();   // im selben Fingertipp starten (iOS-Pflicht)
+  game.cat=catId; game.results=[]; game.active=false;
+  document.body.classList.add("playing"); $("rotate").classList.add("show");
+  keepAwake(true);
+  show("ready");
+  let n=3; $("count").textContent=n;
+  clearInterval(game.cdTimer);
+  game.cdTimer=setInterval(()=>{
+    n--; if(n>0){$("count").textContent=n;sndTick()}
+    else{clearInterval(game.cdTimer);beginPlay()}
+  },1000);
+}
+function beginPlay(){
+  show("play"); $("play").className="screen on";
+  $("rotate").classList.remove("show");
+  game.active=true; game.lock=false;
+  game.armed = tilt==null || Math.abs(tilt)<TH_NEUTRAL;
+  game.end=performance.now()+roundSec*1000; game.lastSec=-1;
+  $("score").textContent="0"; $("timer").classList.remove("low");
+  updateSensorUI(); nextWord(); beep(990,.2,"triangle");
+  cancelAnimationFrame(game.raf); tick();
+}
+function tick(){
+  if(!game.active)return;
+  const left=Math.max(0,game.end-performance.now()), s=Math.ceil(left/1000);
+  if(s!==game.lastSec){
+    game.lastSec=s; $("timer").textContent=s;
+    if(s<=5&&s>0){$("timer").classList.add("low");sndTick()}
+  }
+  if(left<=0){finish();return}
+  game.raf=requestAnimationFrame(tick);
+}
+function checkTilt(){
+  if(game.lock)return;
+  if(!game.armed){ if(Math.abs(tilt)<TH_NEUTRAL)game.armed=true; return }
+  if(tilt<-TH_FIRE)answer(true);       // Bildschirm zum Boden = richtig
+  else if(tilt>TH_FIRE)answer(false);  // Bildschirm zur Decke = überspringen
+}
+function answer(ok){
+  if(!game.active||game.lock)return;
+  game.lock=true; game.armed=false;    // Sperre gegen Doppelzählung
+  game.results.push({w:game.current,ok});
+  $("score").textContent=game.results.filter(r=>r.ok).length;
+  $("play").classList.add(ok?"ok":"skip");
+  $("word").textContent=ok?T("ok"):T("skip"); fitWord();
+  ok?(sndOk(),buzz(80)):(sndSkip(),buzz([40,40,40]));
+  setTimeout(()=>{
+    if(!game.active)return;
+    $("play").classList.remove("ok","skip");
+    nextWord(); game.lock=false;
+    // Ohne Sensor (oder Knopf) sofort wieder bereit; mit Sensor erst zurück in die Mitte
+    if(sensor!=="on"||tilt==null||Math.abs(tilt)<TH_NEUTRAL)game.armed=true;
+  },800);
+}
+$("tapOk").onclick=e=>{e.stopPropagation();unlockAudio();answer(true)};
+$("tapSkip").onclick=e=>{e.stopPropagation();unlockAudio();answer(false)};
+$("quit").onclick=()=>{stopGame();showHome()};
+
+function stopGame(){
+  game.active=false; clearInterval(game.cdTimer); cancelAnimationFrame(game.raf);
+  document.body.classList.remove("playing"); $("rotate").classList.remove("show"); keepAwake(false);
+}
+function finish(){
+  if(game.current && !game.lock) game.results.push({w:game.current,ok:false,last:true});
+  stopGame(); sndEnd(); buzz([200,100,200]);
+  const ok=game.results.filter(r=>r.ok).length;
+  $("resN").textContent=ok;
+  $("resT").textContent=T("correctOf")(ok,game.results.length);
+  $("resList").innerHTML=game.results.map(r=>`<li class="${r.ok?"":"s"}"><span class="m">${r.ok?"✅":"⏭️"}</span>${esc(r.w)}</li>`).join("");
+  renderHome(); show("result"); $("result").scrollTop=0;
+}
+function esc(s){return s.replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]))}
+$("again").onclick=()=>startRound(game.cat);
+$("toHome").onclick=showHome;
+function showHome(){renderHome();updateSensorUI();show("home")}
+
+renderHome();
+</script>
+</body>
+</html>
