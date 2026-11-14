@@ -200,13 +200,18 @@ function show(id){document.querySelectorAll(".screen").forEach(s=>s.classList.to
 
 /* ---------- Ton ---------- */
 let ac=null;
-function unlockAudio(){try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()} if(ac.state==="suspended")ac.resume()}catch(e){}}
+function unlockAudio(){
+  // iPhone: Töne auch bei eingeschaltetem Stumm-Schalter abspielen (Audio Session API, Safari 16.4+)
+  try{ if(navigator.audioSession) navigator.audioSession.type="playback" }catch(e){}
+  try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()} if(ac.state==="suspended")ac.resume()}catch(e){}
+}
 function beep(freq,dur,type="sine",vol=.25,when=0){
   if(!ac)return; try{const t=ac.currentTime+when,o=ac.createOscillator(),g=ac.createGain();
   o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
   o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur)}catch(e){}}
-const sndOk=()=>{beep(660,.12,"triangle");beep(990,.18,"triangle",.25,.1)};
-const sndSkip=()=>beep(220,.25,"sawtooth",.12);
+// Richtig: helles „Ding-Ding“ nach oben. Überspringen: tiefes kurzes „Möp“ nach unten.
+const sndOk=()=>{beep(784,.15,"triangle",.6);beep(1175,.3,"triangle",.6,.12)};
+const sndSkip=()=>{beep(330,.15,"square",.3);beep(220,.3,"square",.3,.13)};
 const sndTick=()=>beep(880,.06,"square",.08);
 const sndEnd=()=>{beep(520,.25,"square",.15);beep(390,.25,"square",.15,.25);beep(260,.5,"square",.15,.5)};
 // Vibration: Android kann navigator.vibrate. Safari am iPhone nicht; dort hilft ein Trick:
