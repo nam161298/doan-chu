@@ -206,7 +206,28 @@ const sndOk=()=>{beep(660,.12,"triangle");beep(990,.18,"triangle",.25,.1)};
 const sndSkip=()=>beep(220,.25,"sawtooth",.12);
 const sndTick=()=>beep(880,.06,"square",.08);
 const sndEnd=()=>{beep(520,.25,"square",.15);beep(390,.25,"square",.15,.25);beep(260,.5,"square",.15,.5)};
-const buzz=p=>{try{navigator.vibrate&&navigator.vibrate(p)}catch(e){}};
+// Vibration: Android kann navigator.vibrate. Safari am iPhone nicht; dort hilft ein Trick:
+// Ein verstecktes Schalter-Feld (input type=checkbox switch, ab iOS 18) gibt beim Umschalten ein kurzes Haptik-Feedback.
+let hapticEl=null;
+function hapticTap(){
+  try{
+    if(!hapticEl){
+      hapticEl=document.createElement("label");
+      hapticEl.setAttribute("aria-hidden","true");
+      hapticEl.style.cssText="position:fixed;left:-9999px;top:0;width:1px;height:1px;overflow:hidden;opacity:0";
+      const inp=document.createElement("input"); inp.type="checkbox"; inp.setAttribute("switch","");
+      hapticEl.appendChild(inp); document.body.appendChild(hapticEl);
+    }
+    hapticEl.click();
+  }catch(e){}
+}
+function buzz(p){
+  const pattern=Array.isArray(p)?p:[p];
+  try{ if(navigator.vibrate && navigator.vibrate(pattern)) return }catch(e){}
+  // iPhone: für jeden Puls ein Haptik-Tipp
+  let t=0;
+  pattern.forEach((d,i)=>{ if(i%2===0) setTimeout(hapticTap,t); t+=d; });
+}
 
 /* ---------- Startbildschirm ---------- */
 function renderHome(){
@@ -228,8 +249,15 @@ $("cats").onclick=e=>{const b=e.target.closest("[data-c]");if(b)startRound(b.dat
 // +1 Bildschirm zeigt zur Decke, 0 Handy steht senkrecht (an der Stirn), -1 Bildschirm zeigt zum Boden.
 let sensor="unknown";   // unknown | on | denied | none
 let tilt=null, lastEvt=0;
-const TH_FIRE=0.55;     // ca. 33° gekippt -> zählt
-const TH_NEUTRAL=0.30;  // ca. 17° -> wieder "gerade", nächster Kipp erlaubt
+// Winkel in Grad relativ zur eigenen Haltung (wird beim Rundenstart gemessen und langsam nachgeführt).
+// Nach oben kippen fällt mit dem Kopf schwerer, daher dort eine kleinere Schwelle.
+const DEG_DOWN=30;      // so weit nach unten -> richtig
+const DEG_UP=20;        // so weit nach oben  -> überspringen
+const DEG_NEUTRAL=12;   // zurück in diesen Bereich -> nächster Kipp erlaubt
+let base=0;
+const angle=()=>Math.asin(Math.max(-1,Math.min(1,tilt)))*180/Math.PI;
+const rel=()=>angle()-base;
+function calibrate(){ base = (tilt!=null && Math.abs(angle())<25) ? angle() : 0 }
 function onOrient(e){
   if(e.beta==null||e.gamma==null)return;
   const r=Math.PI/180;
@@ -305,7 +333,7 @@ function beginPlay(){
   show("play"); $("play").className="screen on";
   $("rotate").classList.remove("show");
   game.active=true; game.lock=false;
-  game.armed = tilt==null || Math.abs(tilt)<TH_NEUTRAL;
+  calibrate(); game.armed = true;
   game.end=performance.now()+roundSec*1000; game.lastSec=-1;
   $("score").textContent="0"; $("timer").classList.remove("low");
   updateSensorUI(); nextWord(); beep(990,.2,"triangle");
@@ -323,9 +351,15 @@ function tick(){
 }
 function checkTilt(){
   if(game.lock)return;
-  if(!game.armed){ if(Math.abs(tilt)<TH_NEUTRAL)game.armed=true; return }
-  if(tilt<-TH_FIRE)answer(true);       // Bildschirm zum Boden = richtig
-  else if(tilt>TH_FIRE)answer(false);  // Bildschirm zur Decke = überspringen
+  const r=rel();
+  if(Math.abs(r)<DEG_NEUTRAL){
+    // Haltung langsam nachführen, falls man den Kopf etwas anders hält
+    base=Math.max(-25,Math.min(25,base+r*0.03));
+    game.armed=true; return;
+  }
+  if(!game.armed)return;
+  if(r<-DEG_DOWN)answer(true);        // Bildschirm zum Boden = richtig
+  else if(r>DEG_UP)answer(false);     // Bildschirm zur Decke = überspringen
 }
 function answer(ok){
   if(!game.active||game.lock)return;
@@ -340,7 +374,7 @@ function answer(ok){
     $("play").classList.remove("ok","skip");
     nextWord(); game.lock=false;
     // Ohne Sensor (oder Knopf) sofort wieder bereit; mit Sensor erst zurück in die Mitte
-    if(sensor!=="on"||tilt==null||Math.abs(tilt)<TH_NEUTRAL)game.armed=true;
+    if(sensor!=="on"||tilt==null||Math.abs(rel())<DEG_NEUTRAL)game.armed=true;
   },800);
 }
 $("tapOk").onclick=e=>{e.stopPropagation();unlockAudio();answer(true)};
