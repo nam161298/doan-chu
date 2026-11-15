@@ -72,6 +72,9 @@ h1 span{color:var(--gold)}
 .tap.y{background:rgba(255,255,255,.22)}
 .tap{position:relative;cursor:pointer}
 .hap{position:absolute;inset:0;width:100%;height:100%;opacity:.01;margin:0;pointer-events:none}
+#soundHint{display:none;position:absolute;top:max(58px,calc(env(safe-area-inset-top) + 48px));left:50%;transform:translateX(-50%);
+  background:rgba(0,0,0,.35);border-radius:999px;padding:6px 14px;font-size:14px;font-weight:700;white-space:nowrap}
+#soundHint.on{display:block}
 #sensorState{position:absolute;bottom:max(70px,calc(env(safe-area-inset-bottom) + 64px));left:0;right:0;font-size:13px;color:var(--muted)}
 .rotate{display:none;position:fixed;inset:0;background:var(--bg2);z-index:20;align-items:center;justify-content:center;
   flex-direction:column;gap:12px;text-align:center;padding:24px;font-size:22px;font-weight:700}
@@ -122,6 +125,7 @@ h1 span{color:var(--gold)}
   <div id="score">0</div>
   <div id="word"></div>
   <div id="sensorState"></div>
+  <div id="soundHint" data-t="soundHint"></div>
   <div class="taps">
     <!-- label + verstecktes Schalter-Feld: der echte Fingertipp legt den Schalter um, das gibt am iPhone Haptik -->
     <label class="tap" id="tapSkip"><input type="checkbox" switch class="hap"><span></span></label>
@@ -176,7 +180,7 @@ const TXT = {
   rotate:"Xoay ngang điện thoại", rotateSmall:"Để chữ to hơn",
   noSensor:"Không đọc được cảm biến nghiêng. Hãy dùng nút <b>Đúng</b> / <b>Bỏ qua</b> trên màn hình.",
   denied:"Bạn chưa cho phép cảm biến chuyển động. Đóng ứng dụng, mở lại và bấm <b>Allow</b>. Trong lúc đó dùng nút trên màn hình.",
-  sensorOn:"Cảm biến nghiêng: bật", sensorOff:"Cảm biến tắt – dùng nút"},
+  sensorOn:"Cảm biến nghiêng: bật", sensorOff:"Cảm biến tắt – dùng nút", soundHint:"🔇 Chạm vào màn hình để bật tiếng"},
  de:{tagline:"Das Rate-Spiel für die ganze Familie – Handy an die Stirn!",
   how:"<b>So geht's:</b> Eine Person hält das Handy an die Stirn, Bildschirm nach außen. Die anderen erklären den Begriff.<br>⬇️ <b>Nach unten kippen</b> = Richtig &nbsp; ⬆️ <b>Nach oben kippen</b> = Überspringen",
   time:"Rundenzeit:", forehead:"Handy an die Stirn!", readyHint:"Handy quer halten, Bildschirm zu den anderen.",
@@ -185,7 +189,7 @@ const TXT = {
   rotate:"Handy quer drehen", rotateSmall:"Dann wird die Schrift größer",
   noSensor:"Kippsensor nicht erreichbar. Nutze die Knöpfe <b>Richtig</b> / <b>Überspringen</b> auf dem Bildschirm.",
   denied:"Bewegungssensor nicht erlaubt. App schließen, neu öffnen und <b>Allow</b> tippen. Bis dahin gehen die Knöpfe.",
-  sensorOn:"Kippsensor: an", sensorOff:"Sensor aus – Knöpfe nutzen"}
+  sensorOn:"Kippsensor: an", sensorOff:"Sensor aus – Knöpfe nutzen", soundHint:"🔇 Einmal tippen für Ton"}
 };
 
 /* ---------- Kleine Helfer ---------- */
@@ -203,10 +207,33 @@ let ac=null;
 function unlockAudio(){
   // iPhone: Töne auch bei eingeschaltetem Stumm-Schalter abspielen (Audio Session API, Safari 16.4+)
   try{ if(navigator.audioSession) navigator.audioSession.type="playback" }catch(e){}
-  try{if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()} if(ac.state==="suspended")ac.resume()}catch(e){}
+  try{
+    // Nach Bildschirm-Aus bleibt der alte Ton-Kanal am iPhone oft stumm ("interrupted"/"suspended").
+    // Bei einem Fingertipp dann einfach einen neuen anlegen, das klappt zuverlässig.
+    if(ac && ac.state!=="running"){ try{ac.close()}catch(e){} ac=null }
+    if(!ac){ac=new (window.AudioContext||window.webkitAudioContext)()}
+    if(ac.state!=="running")ac.resume();
+  }catch(e){}
+  updateSoundHint();
+  if(typeof keepAwake==="function")keepAwake(true);
 }
+// Jeder Fingertipp irgendwo auf der Seite weckt den Ton wieder auf
+document.addEventListener("touchend",unlockAudio,{capture:true,passive:true});
+document.addEventListener("click",unlockAudio,{capture:true});
+function updateSoundHint(){
+  const h=document.getElementById("soundHint"); if(!h)return;
+  h.classList.toggle("on", game.active && !!ac && ac.state!=="running");
+}
+// Zurück aus dem Sperrbildschirm: Ton versuchen fortzusetzen, Bildschirm wieder wach halten
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState!=="visible")return;
+  try{ if(ac && ac.state!=="running") ac.resume().then(updateSoundHint,()=>{}) }catch(e){}
+  keepAwake(true);
+  setTimeout(updateSoundHint,600);
+});
 function beep(freq,dur,type="sine",vol=.25,when=0){
-  if(!ac)return; try{const t=ac.currentTime+when,o=ac.createOscillator(),g=ac.createGain();
+  if(!ac)return; if(ac.state!=="running"){try{ac.resume()}catch(e){}}
+  try{const t=ac.currentTime+when,o=ac.createOscillator(),g=ac.createGain();
   o.type=type;o.frequency.value=freq;g.gain.setValueAtTime(vol,t);g.gain.exponentialRampToValueAtTime(.001,t+dur);
   o.connect(g);g.connect(ac.destination);o.start(t);o.stop(t+dur)}catch(e){}}
 // Richtig: helles „Ding-Ding“ nach oben. Überspringen: tiefes kurzes „Möp“ nach unten.
@@ -316,10 +343,14 @@ function fitWord(){
 addEventListener("resize",()=>{if(game.active)fitWord()});
 
 let wakeLock=null;
+// Bildschirm wach halten, solange das Spiel offen ist (auch zwischen den Runden).
+// iOS gibt die Sperre beim Bildschirm-Aus oder App-Wechsel frei; dann bei Rückkehr/Tipp neu holen.
 async function keepAwake(on){
+  if(!on)return;   // absichtlich nie freigeben, solange die Seite sichtbar ist
   try{
-    if(on&&"wakeLock" in navigator){wakeLock=await navigator.wakeLock.request("screen")}
-    else if(!on&&wakeLock){await wakeLock.release();wakeLock=null}
+    if(!("wakeLock" in navigator)||document.visibilityState!=="visible")return;
+    if(wakeLock && !wakeLock.released)return;
+    wakeLock=await navigator.wakeLock.request("screen");
   }catch(e){}
 }
 
