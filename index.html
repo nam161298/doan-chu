@@ -440,6 +440,8 @@ $("toHome").onclick=showHome;
 function showHome(){renderHome();updateSensorUI();show("home")}
 
 renderHome();
+// Offline spielen: Dateien im Handy speichern (Service Worker)
+if("serviceWorker" in navigator){addEventListener("load",()=>{navigator.serviceWorker.register("sw.js").catch(()=>{})})}
 </script>
 </body>
 </html>
