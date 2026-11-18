@@ -234,6 +234,8 @@ document.addEventListener("visibilitychange",()=>{
   try{ if(ac && ac.state!=="running") ac.resume().then(updateSoundHint,()=>{}) }catch(e){}
   keepAwake(true);
   setTimeout(updateSoundHint,600);
+  // iOS stoppt den Bewegungssensor manchmal nach Pause/App-Wechsel: Zuhörer neu anmelden
+  try{ if(listening){ window.removeEventListener("deviceorientation",onOrient); window.addEventListener("deviceorientation",onOrient) } }catch(e){}
 });
 function beep(freq,dur,type="sine",vol=.25,when=0){
   if(!ac)return; if(ac.state!=="running"){try{ac.resume()}catch(e){}}
@@ -390,17 +392,28 @@ function tick(){
     if(s<=5&&s>0){$("timer").classList.add("low");sndTick()}
   }
   if(left<=0){finish();return}
+  // Auch ohne neues Sensor-Ereignis prüfen (iPhone meldet bei ruhiger Haltung kaum etwas)
+  if(sensor==="on"&&tilt!=null)checkTilt();
   game.raf=requestAnimationFrame(tick);
 }
+let stillRef=null, stillSince=0;
 function checkTilt(){
   if(game.lock)return;
   const r=rel();
   if(Math.abs(r)<DEG_NEUTRAL){
     // Haltung langsam nachführen, falls man den Kopf etwas anders hält
     base=Math.max(-25,Math.min(25,base+r*0.03));
-    game.armed=true; return;
+    game.armed=true; stillRef=null; return;
   }
-  if(!game.armed)return;
+  if(!game.armed){
+    // Festgefahren? Wer das Handy ruhig in einer neuen Haltung hält (außerhalb der Mitte),
+    // bekommt nach 0,7 s diese Haltung als neue Mitte, sonst reagiert das Kippen nicht mehr.
+    const now=performance.now();
+    if(stillRef===null||Math.abs(r-stillRef)>4){stillRef=r;stillSince=now}
+    else if(now-stillSince>700&&Math.abs(r)<=25){base=Math.max(-25,Math.min(25,base+r));game.armed=true;stillRef=null}
+    return;
+  }
+  stillRef=null;
   if(r<-DEG_DOWN)answer(true);        // Bildschirm zum Boden = richtig
   else if(r>DEG_UP)answer(false);     // Bildschirm zur Decke = überspringen
 }
