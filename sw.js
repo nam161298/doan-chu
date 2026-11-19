@@ -35,7 +35,11 @@ self.addEventListener("fetch", e => {
   if (req.mode === "navigate") {
     e.respondWith(
       withTimeout(fetch(req), 3000)
-        .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put("index.html", copy)); return res; })
+        .then(res => {
+          // Nur gute Antworten speichern, sonst ersetzt eine Fehlerseite die brauchbare Offline-Fassung
+          if (res && res.ok) { const copy = res.clone(); caches.open(CACHE).then(c => c.put("index.html", copy)); }
+          return res;
+        })
         .catch(() => caches.match("index.html"))
     );
     return;

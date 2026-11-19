@@ -378,7 +378,7 @@ function beginPlay(){
   show("play"); $("play").className="screen on";
   $("rotate").classList.remove("show");
   game.active=true; game.lock=false;
-  calibrate(); game.armed = true;
+  calibrate(); game.armed = true; stillRef=null; lastEvt=performance.now();
   game.end=performance.now()+roundSec*1000; game.lastSec=-1;
   $("score").textContent="0"; $("timer").classList.remove("low");
   updateSensorUI(); nextWord(); beep(990,.2,"triangle");
@@ -394,9 +394,15 @@ function tick(){
   if(left<=0){finish();return}
   // Auch ohne neues Sensor-Ereignis prüfen (iPhone meldet bei ruhiger Haltung kaum etwas)
   if(sensor==="on"&&tilt!=null)checkTilt();
+  // Kommt länger kein Sensorwert mehr (iOS pausiert ihn manchmal mitten in der Runde): Zuhörer neu anmelden
+  const nowT=performance.now();
+  if(sensor==="on"&&listening&&nowT-lastEvt>2000&&nowT-lastResub>2000){
+    lastResub=nowT;
+    try{window.removeEventListener("deviceorientation",onOrient);window.addEventListener("deviceorientation",onOrient)}catch(e){}
+  }
   game.raf=requestAnimationFrame(tick);
 }
-let stillRef=null, stillSince=0;
+let stillRef=null, stillSince=0, lastResub=0;
 function checkTilt(){
   if(game.lock)return;
   const r=rel();
@@ -419,7 +425,7 @@ function checkTilt(){
 }
 function answer(ok){
   if(!game.active||game.lock)return;
-  game.lock=true; game.armed=false;    // Sperre gegen Doppelzählung
+  game.lock=true; game.armed=false; stillRef=null;    // Sperre gegen Doppelzählung
   game.results.push({w:game.current,ok});
   $("score").textContent=game.results.filter(r=>r.ok).length;
   $("play").classList.add(ok?"ok":"skip");
