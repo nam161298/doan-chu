@@ -27,6 +27,7 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET") return;
   const url = new URL(req.url);
+  if (url.pathname.includes("/easy/")) return;   // die leichte Version hat ihren eigenen Speicher
   const sameOrigin = url.origin === self.location.origin;
   const isFont = url.hostname === "fonts.googleapis.com" || url.hostname === "fonts.gstatic.com";
   if (!sameOrigin && !isFont) return;

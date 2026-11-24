@@ -3,11 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,user-scalable=no">
-<title>Đoán Chữ</title>
+<title>Đoán Chữ OV</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="apple-mobile-web-app-title" content="Đoán Chữ">
+<meta name="apple-mobile-web-app-title" content="Đoán Chữ OV">
 <meta name="theme-color" content="#b3122b">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="manifest" href="manifest.webmanifest">
@@ -35,7 +35,8 @@ button{font-family:inherit;color:inherit;border:0;cursor:pointer}
 h1{font-size:32px;font-weight:900;letter-spacing:.5px}
 h1 span{color:var(--gold)}
 .sub{color:var(--muted);font-size:15px;margin-bottom:14px;line-height:1.35}
-.pill{background:var(--card);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
+.pills{display:flex;gap:8px}
+.pill{color:inherit;text-decoration:none;background:var(--card);border-radius:999px;padding:8px 14px;font-weight:700;font-size:14px}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:14px}
 .row label{color:var(--muted);font-size:14px;margin-right:4px}
 .seg{background:var(--card);border-radius:12px;padding:8px 12px;font-weight:700;font-size:15px}
@@ -103,11 +104,10 @@ h1 span{color:var(--gold)}
 
 <section id="home" class="screen on">
   <div class="top">
-    <h1>Đoán <span>Chữ</span></h1>
-    <button class="pill" id="langBtn">DE</button>
+    <h1>Đoán <span>Chữ</span> OV</h1>
+    <span class="pills"><a class="pill" id="verBtn" href="easy/">Dễ</a> <button class="pill" id="langBtn">DE</button></span>
   </div>
   <p class="sub" data-t="tagline"></p>
-  <div class="how" data-t="how"></div>
   <div class="note" id="sensorNote"></div>
   <div class="row"><label data-t="time"></label><span id="times"></span></div>
   <div class="grid" id="cats"></div>
@@ -277,7 +277,7 @@ function renderHome(){
   $("langBtn").textContent = lang==="vi" ? "DE" : "VI";
   $("times").innerHTML=[60,90,120].map(s=>`<button class="seg${s===roundSec?" sel":""}" data-s="${s}">${s}s</button>`).join(" ");
   const all={id:"all",i:"🎲",vi:TXT.vi.all,de:TXT.de.all,w:[...new Set(CATS.flatMap(c=>c.w))]};
-  $("cats").innerHTML=[...CATS,all].map(c=>`<button class="cat" data-c="${c.id}"><i>${c.i}</i><b>${c[lang]}</b><small>${T("words")(c.w.length)}</small></button>`).join("");
+  $("cats").innerHTML=[all,...CATS].map(c=>`<button class="cat" data-c="${c.id}"><i>${c.i}</i><b>${c[lang]}</b><small>${T("words")(c.w.length)}</small></button>`).join("");
   $("tapOk").querySelector("span").textContent=T("tapOk"); $("tapSkip").querySelector("span").textContent=T("tapSkip");
   $("again").textContent=T("again"); $("toHome").textContent=T("home");
 }
