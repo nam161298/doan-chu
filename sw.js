@@ -1,7 +1,7 @@
 // Offline-Speicher fürs Spiel (Service Worker).
 // Seite: erst Internet versuchen (damit Updates sofort kommen), ohne Netz aus dem Speicher.
 // Bilder, Manifest, Schrift: aus dem Speicher, im Hintergrund auffrischen.
-const CACHE = "doan-chu-v1";
+const CACHE = "doan-chu-v2";
 const FILES = ["./", "index.html", "manifest.webmanifest", "apple-touch-icon.png", "icon-512.png"];
 
 self.addEventListener("install", e => {
